@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FraudShield AI — Intelligent Financial Fraud Detection</title>
+  <meta name="description" content="FraudShield AI: Intelligent financial fraud detection using machine learning, XGBoost, SHAP explainability, and real-time analytics." />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+
+  <!-- App CSS -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div class="app-shell">
+  <!-- ── Sidebar ─────────────────────────────────────────────────── -->
+  <nav class="sidebar" id="sidebar" aria-label="Main navigation">
+    <div class="sidebar-logo">
+      <div class="logo-mark">
+        <div class="logo-icon">🛡️</div>
+        <div>
+          <div>FraudShield AI</div>
+          <div class="logo-sub">Fraud Detection Platform</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-nav">
+      <div class="nav-section-label">Dashboard</div>
+      <button class="nav-item" data-page="overview" aria-label="Executive Overview">
+        <span class="nav-icon">📊</span> Executive Overview
+      </button>
+
+      <div class="nav-section-label">Data</div>
+      <button class="nav-item" data-page="explorer" aria-label="Transaction Explorer">
+        <span class="nav-icon">🔎</span> Transaction Explorer
+      </button>
+      <button class="nav-item" data-page="eda" aria-label="Exploratory Data Analysis">
+        <span class="nav-icon">📈</span> Data Analysis (EDA)
+      </button>
+
+      <div class="nav-section-label">Prediction</div>
+      <button class="nav-item" data-page="prediction" aria-label="Fraud Prediction">
+        <span class="nav-icon">🎯</span> Fraud Prediction
+      </button>
+      <button class="nav-item" data-page="anomaly" aria-label="Anomaly Detection">
+        <span class="nav-icon">🌲</span> Anomaly Detection
+      </button>
+
+      <div class="nav-section-label">Models</div>
+      <button class="nav-item" data-page="models" aria-label="Model Laboratory">
+        <span class="nav-icon">🧪</span> Model Laboratory
+      </button>
+      <button class="nav-item" data-page="explainability" aria-label="Explainable AI">
+        <span class="nav-icon">🔍</span> Explainable AI
+      </button>
+
+      <div class="nav-section-label">Insights</div>
+      <button class="nav-item" data-page="business" aria-label="Business Intelligence">
+        <span class="nav-icon">💼</span> Business Intelligence
+      </button>
+
+      <div class="nav-section-label">Operations</div>
+      <button class="nav-item" data-page="cases" aria-label="Investigation Cases">
+        <span class="nav-icon">📂</span> Investigation Cases
+      </button>
+
+      <div class="nav-section-label">System</div>
+      <button class="nav-item" data-page="health" aria-label="System Health">
+        <span class="nav-icon">⚡</span> System Health
+      </button>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="health-badge">
+        <div class="health-dot" id="health-dot"></div>
+        <span id="health-text">Connecting…</span>
+      </div>
+    </div>
+  </nav><!-- /sidebar -->
+
+  <!-- ── Main content ───────────────────────────────────────────── -->
+  <div class="main-content">
+
+    <!-- Top bar -->
+    <header class="top-bar">
+      <button class="burger-btn" id="burger" aria-label="Toggle sidebar">☰</button>
+      <div>
+        <div class="top-bar-title" id="top-bar-title">Executive Overview</div>
+        <div class="top-bar-sub"  id="top-bar-sub">Real-time fraud monitoring dashboard</div>
+      </div>
+      <div class="top-bar-spacer"></div>
+      <div style="font-size:0.75rem;color:var(--text-muted)">
+        ⚠️ Educational prototype — not for production use
+      </div>
+    </header>
+
+    <!-- Toast container -->
+    <div id="toast-container" aria-live="polite"></div>
+
+    <!-- ══════════════════════ OVERVIEW PAGE ══════════════════════ -->
+    <main class="page active" id="page-overview">
+      <div id="setup-banner" class="setup-banner hidden">
+        <div class="setup-banner-icon">🚀</div>
+        <div>
+          <h3>Setup Required</h3>
+          <p>The application is in <strong>setup mode</strong>. Real data and model predictions are not available yet.</p>
+          <p id="setup-extra"></p>
+          <p>
+            📥 Download dataset: <code>https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud</code><br/>
+            📁 Place in: <code>data/creditcard.csv</code><br/>
+            ⚙️ Train models: <code>python train_pipeline.py</code>
+          </p>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Total Transactions</div>
+          <div class="kpi-value" id="kpi-total">—</div>
+          <div class="kpi-sub">Dataset records</div>
+        </div>
+        <div class="kpi-card success">
+          <div class="kpi-label">Legitimate</div>
+          <div class="kpi-value" style="color:var(--success)" id="kpi-legit">—</div>
+          <div class="kpi-sub">Non-fraud transactions</div>
+        </div>
+        <div class="kpi-card danger">
+          <div class="kpi-label">Fraudulent</div>
+          <div class="kpi-value" style="color:var(--danger)" id="kpi-fraud">—</div>
+          <div class="kpi-sub" id="kpi-fraud-pct">—</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Data Source</div>
+          <div class="kpi-value" style="font-size:1rem;margin-top:8px" id="kpi-source">—</div>
+          <div class="kpi-sub">European CC Fraud Dataset</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Best Model</div>
+          <div class="kpi-value" style="font-size:1rem;margin-top:8px" id="kpi-best-model">—</div>
+          <div class="kpi-sub">By F1-score</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Last Training</div>
+          <div class="kpi-value" style="font-size:0.85rem;margin-top:8px" id="kpi-ts">—</div>
+          <div class="kpi-sub">UTC timestamp</div>
+        </div>
+      </div>
+
+      <!-- Charts row -->
+      <div class="charts-grid">
+        <div class="card">
+          <div class="card-title"><span class="icon">🍩</span>Fraud Distribution</div>
+          <div class="chart-container"><canvas id="chart-overview-dist"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="icon">🤖</span>Model Performance Summary</div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Model</th><th>F1</th><th>Precision</th><th>Recall</th>
+                  <th>ROC-AUC</th><th>Type</th>
+                </tr>
+              </thead>
+              <tbody id="overview-model-table">
+                <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">Awaiting training…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Business insight strip -->
+      <div id="overview-flagged"></div>
+
+      <div class="alert alert-info">
+        <span>ℹ️</span>
+        <span>
+          <strong>Data Source:</strong> European Credit Card Fraud Dataset (2013) — 284,807 transactions
+          from two days in September 2013 by European cardholders. Features V1–V28 are PCA-transformed
+          for privacy. Dataset available at
+          <a href="https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud" target="_blank">Kaggle</a> and
+          <a href="https://zenodo.org/records/7395559" target="_blank">Zenodo</a>.
+        </span>
+      </div>
+    </main><!-- /overview -->
+
+    <!-- ══════════════════════ EXPLORER PAGE ══════════════════════ -->
+    <main class="page" id="page-explorer">
+      <div class="section-heading">
+        <div>
+          <h2>Transaction Explorer</h2>
+          <p id="tx-count">Loading…</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-secondary btn-sm" onclick="filterTransactions(null)">All</button>
+          <button class="btn btn-secondary btn-sm" onclick="filterTransactions(0)">Legitimate</button>
+          <button class="btn btn-secondary btn-sm" onclick="filterTransactions(1)">Fraud Only</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Time (s)</th>
+                <th>Amount</th>
+                <th>V1</th>
+                <th>V4</th>
+                <th>V14</th>
+                <th>V17</th>
+                <th>Label</th>
+              </tr>
+            </thead>
+            <tbody id="tx-table-body">
+              <tr><td colspan="7" style="text-align:center;padding:24px"><div class="spinner" style="margin:auto"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="tx-pagination" class="pagination"></div>
+      </div>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin-top:8px">
+        Only selected columns shown for readability. Class labels are from the ground-truth dataset.
+      </p>
+    </main><!-- /explorer -->
+
+    <!-- ══════════════════════ PREDICTION PAGE ════════════════════ -->
+    <main class="page" id="page-prediction">
+      <div class="alert alert-warning" style="margin-bottom:20px">
+        <span>⚠️</span>
+        <span>Predictions are experimental model outputs on manually entered features.
+        They are NOT confirmed fraud findings. Always involve human review before any financial action.</span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start" id="pred-layout">
+        <!-- Form -->
+        <div class="card">
+          <div class="card-title"><span class="icon">🎯</span>Transaction Input</div>
+          <div style="margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-secondary btn-sm" onclick="loadFraudExample()" id="btn-fraud-ex">Load Fraud Example</button>
+            <button class="btn btn-secondary btn-sm" onclick="loadLegitExample()" id="btn-legit-ex">Load Legit Example</button>
+            <button class="btn btn-secondary btn-sm" onclick="clearPredForm()">Clear</button>
+          </div>
+          <div class="form-grid" id="pred-form-fields"></div>
+          <div style="margin-top:16px">
+            <button class="btn btn-primary" id="pred-btn" onclick="submitPrediction()">
+              🎯 Run Prediction
+            </button>
+          </div>
+        </div>
+
+        <!-- Results -->
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div class="pred-result" id="pred-result">
+            <div style="color:var(--text-muted);padding:24px 0">
+              <div style="font-size:2rem;margin-bottom:8px">🎯</div>
+              <p>Enter transaction features and click Run Prediction</p>
+            </div>
+          </div>
+          <div class="card" id="pred-explanation">
+            <div style="color:var(--text-muted);text-align:center;padding:16px;font-size:0.85rem">
+              SHAP explanation will appear here after prediction.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <style>
+        @media (max-width:900px) { #pred-layout { grid-template-columns: 1fr; } }
+      </style>
+    </main><!-- /prediction -->
+
+    <!-- ══════════════════════ EDA PAGE ═══════════════════════════ -->
+    <main class="page" id="page-eda">
+      <div id="eda-content">
+        <div class="loading-state"><div class="spinner"></div><p>Loading EDA…</p></div>
+      </div>
+    </main>
+
+    <!-- ══════════════════════ MODELS PAGE ════════════════════════ -->
+    <main class="page" id="page-models">
+      <div id="models-content">
+        <div class="loading-state"><div class="spinner"></div><p>Loading model results…</p></div>
+      </div>
+    </main>
+
+    <!-- ══════════════════════ EXPLAINABILITY PAGE ════════════════ -->
+    <main class="page" id="page-explainability">
+      <div class="section-heading">
+        <div>
+          <h2>Explainable AI — SHAP</h2>
+          <p>Global feature importance from the best supervised model</p>
+        </div>
+      </div>
+      <div class="card" id="shap-global-content">
+        <div class="loading-state"><div class="spinner"></div><p>Computing SHAP values…</p></div>
+      </div>
+      <div class="alert alert-info" style="margin-top:16px">
+        <span>ℹ️</span>
+        <span>For local (per-prediction) explanations, navigate to <strong>Fraud Prediction</strong>
+        and run a prediction — SHAP contributions appear automatically.</span>
+      </div>
+    </main>
+
+    <!-- ══════════════════════ ANOMALY PAGE ════════════════════════ -->
+    <main class="page" id="page-anomaly">
+      <div id="anomaly-content">
+        <div class="loading-state"><div class="spinner"></div><p>Loading anomaly detection results…</p></div>
+      </div>
+    </main>
+
+    <!-- ══════════════════════ BUSINESS PAGE ══════════════════════ -->
+    <main class="page" id="page-business">
+      <div class="section-heading">
+        <div>
+          <h2>Business Intelligence</h2>
+          <p>Insights derived from actual model evaluation results</p>
+        </div>
+      </div>
+      <div id="business-content">
+        <div class="loading-state"><div class="spinner"></div><p>Loading insights…</p></div>
+      </div>
+    </main>
+
+    <!-- ══════════════════════ INVESTIGATION CASES PAGE ════════════════════════ -->
+    <main class="page" id="page-cases">
+      <div class="section-heading">
+        <div>
+          <h2>Fraud Investigation Workspace</h2>
+          <p>Triage and track cases for flagged suspicious activity (SQLite Persisted)</p>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary btn-sm" onclick="openCreateCaseModal()">➕ New Case</button>
+          <button class="btn btn-secondary btn-sm" onclick="loadCases()">🔄 Refresh</button>
+        </div>
+      </div>
+
+      <!-- Cases KPI -->
+      <div class="kpi-grid" style="margin-bottom:20px;">
+        <div class="kpi-card">
+          <div class="kpi-label">Total Cases</div>
+          <div class="kpi-value" id="case-kpi-total">0</div>
+          <div class="kpi-sub">Logged in registry</div>
+        </div>
+        <div class="kpi-card danger">
+          <div class="kpi-label">Open / Pending</div>
+          <div class="kpi-value" style="color:var(--danger)" id="case-kpi-open">0</div>
+          <div class="kpi-sub">Awaiting review</div>
+        </div>
+        <div class="kpi-card warning">
+          <div class="kpi-label">Under Review</div>
+          <div class="kpi-value" style="color:var(--warning)" id="case-kpi-review">0</div>
+          <div class="kpi-sub">Active triage</div>
+        </div>
+        <div class="kpi-card success">
+          <div class="kpi-label">Resolved / Closed</div>
+          <div class="kpi-value" style="color:var(--success)" id="case-kpi-closed">0</div>
+          <div class="kpi-sub">Determined outcome</div>
+        </div>
+      </div>
+
+      <!-- Filters & Search -->
+      <div class="card" style="margin-bottom:16px;padding:12px 16px;">
+        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
+          <input type="text" id="case-search-input" placeholder="Search case ID, title, notes..." style="flex:1;min-width:200px;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-size:0.875rem;" oninput="debounceCaseSearch()" />
+          
+          <select id="case-status-filter" style="background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-size:0.875rem;" onchange="loadCases()">
+            <option value="All">All Statuses</option>
+            <option value="Open">Open</option>
+            <option value="Under Review">Under Review</option>
+            <option value="Escalated">Escalated</option>
+            <option value="Closed - False Positive">Closed (False Positive)</option>
+            <option value="Closed - Confirmed Fraud">Closed (Confirmed Fraud)</option>
+          </select>
+
+          <select id="case-risk-filter" style="background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text);font-size:0.875rem;" onchange="loadCases()">
+            <option value="All">All Risk Levels</option>
+            <option value="Critical">Critical</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Cases Table Card -->
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Case ID</th>
+                <th>Title / Summary</th>
+                <th>Amount ($)</th>
+                <th>Risk Level</th>
+                <th>Status</th>
+                <th>Flagged By</th>
+                <th>Created / Updated</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="cases-table-body">
+              <tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-muted)">Loading cases...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="alert alert-info" style="margin-top:16px;">
+        ℹ️ <strong>Responsible AI Standard:</strong> Model prediction probability reflects statistical likelihood of fraud patterns, not legal certainty. An opened case initiates human auditor verification before account suspension or chargeback processing.
+      </div>
+    </main>
+
+    <!-- Case Modal -->
+    <div id="case-modal" class="modal-overlay">
+      <div class="modal-box">
+        <div class="modal-header">
+          <h3 class="modal-title" id="case-modal-title">New Investigation Case</h3>
+          <button class="modal-close" onclick="closeCaseModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="case-modal-id" value="" />
+          <div>
+            <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:4px">Case Title</label>
+            <input type="text" id="case-modal-title-input" placeholder="e.g. Unusual High Amount Outlier" style="width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text)" />
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div>
+              <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:4px">Amount ($)</label>
+              <input type="number" step="0.01" id="case-modal-amount-input" placeholder="0.00" style="width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text)" />
+            </div>
+            <div>
+              <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:4px">Risk Level</label>
+              <select id="case-modal-risk-input" style="width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text)">
+                <option value="Critical">Critical</option>
+                <option value="High" selected>High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </div>
+          </div>
+          <div id="case-modal-status-group" style="display:none">
+            <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:4px">Investigation Status</label>
+            <select id="case-modal-status-input" style="width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text)">
+              <option value="Open">Open</option>
+              <option value="Under Review">Under Review</option>
+              <option value="Escalated">Escalated</option>
+              <option value="Closed - False Positive">Closed - False Positive</option>
+              <option value="Closed - Confirmed Fraud">Closed - Confirmed Fraud</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:4px">Investigator Notes</label>
+            <textarea id="case-modal-notes-input" rows="3" placeholder="Add investigative remarks or audit notes..." style="width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text)"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary btn-sm" onclick="closeCaseModal()">Cancel</button>
+          <button class="btn btn-primary btn-sm" onclick="saveCaseModal()">Save Case</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════ HEALTH PAGE ════════════════════════ -->
+    <main class="page" id="page-health">
+      <div class="section-heading">
+        <div>
+          <h2>System Health</h2>
+          <p>Backend, dataset, and model artifact status</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="loadHealth()">🔄 Refresh</button>
+      </div>
+      <div id="health-content">
+        <div class="loading-state"><div class="spinner"></div><p>Checking…</p></div>
+      </div>
+    </main>
+
+  </div><!-- /main-content -->
+</div><!-- /app-shell -->
+
+<!-- Scripts -->
+<script src="js/api.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/app.js"></script>
+
+<!-- Inline patch: wire prediction example loaders -->
+<script>
+  function loadFraudExample() { loadTestExample(); }
+  function clearPredForm() {
+    document.querySelectorAll("#pred-form-fields input").forEach(el => el.value = "");
+    document.getElementById("pred-result").className = "pred-result";
+    document.getElementById("pred-result").innerHTML =
+      '<div style="color:var(--text-muted);padding:24px 0"><div style="font-size:2rem;margin-bottom:8px">🎯</div><p>Enter transaction features and click Run Prediction</p></div>';
+    document.getElementById("pred-explanation").innerHTML =
+      '<div style="color:var(--text-muted);text-align:center;padding:16px;font-size:0.85rem">SHAP explanation will appear here after prediction.</div>';
+  }
+</script>
+
+</body>
+</html>
